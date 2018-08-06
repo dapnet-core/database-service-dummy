@@ -121,7 +121,7 @@ class UsersAPI(Resource):
             print (putparameters)
             r = requests.put(CouchDBURL + '/users/' + args['_id'],
                          auth=(CouchDBUser, CouchDBPass),
-                         data=putparameters)
+                         json=putparameters)
             print (r.status_code)
             print (r.content)
             if r.status_code == 200:

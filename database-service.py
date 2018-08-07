@@ -92,7 +92,7 @@ class UsersAPI(Resource):
                                    location='json')
         self.reqparseput.add_argument('role', type=str,
                                    location='json')
-        self.reqparseput.add_argument('enabled',
+        self.reqparseput.add_argument('enabled', type=bool,
                                    location='json')
         self.reqparseput.add_argument('_rev',
                                    location='json')
@@ -101,7 +101,7 @@ class UsersAPI(Resource):
         args = self.reqparseput.parse_args()
         if args['_id'] is None:
             return make_response(jsonify({'message': '_id missing'}), 404)
-        if not( args['_rev'] is None):
+        if not(args['_rev'] is None):
 # This is edit, as we have a _rev data
             if auth.username() == 'user' and args['_id'] != 'dl1abc':
                 return make_response(jsonify({'message': 'Unauthorized access'}), 403)
@@ -113,8 +113,8 @@ class UsersAPI(Resource):
                 return make_response(jsonify({'message': 'User ' + args['_id'] + \
                   ' is not existing and no _rev tag provided, so you are editing'}), 404)
             putparameters = deepcopy(args)
-            putparameters['created_on'] = "2018-07-08T11:50:02.168325Z"
-            putparameters['created_by'] = auth.username()
+            putparameters['changed_by_on'] = "2018-07-08T11:50:02.168325Z"
+            putparameters['changed_by'] = auth.username()
             del putparameters['_id']
             res = {k:v for k,v in putparameters.items() if v is not None}
             putparameters = res
@@ -127,11 +127,33 @@ class UsersAPI(Resource):
             if r.status_code == 200:
                 return make_response(jsonify({'message': 'success'}), 200)
 
-#        else:
+        else:
 # This is add new
-#            if not ((auth.username() == 'admin') or (auth.username() == 'support')):
-#                return make_response(jsonify({'message': 'Unauthorized access'}), 403)
+            if not ((auth.username() == 'admin') or (auth.username() == 'support')):
+                return make_response(jsonify({'message': 'Unauthorized access'}), 403)
 # Only support and admin can add user
+            if (args['password'] is None):
+                return make_response(jsonify({'message': 'No password given'}), 404)
+            if (args['email'] is None):
+                return make_response(jsonify({'message': 'No email given'}), 404)
+            if (args['role'] is None):
+                return make_response(jsonify({'message': 'No role given'}), 404)
+            if (args['enabled'] is None):
+                return make_response(jsonify({'message': 'No enabled flag given'}), 404)
+# Here all paratered are present
+            putparameters = deepcopy(args)
+            putparameters['changed_by_on'] = "2018-07-08T11:50:02.168325Z"
+            putparameters['changed_by'] = auth.username()
+            del putparameters['_id']
+            del putparameters['_rev']
+            print (putparameters)
+            r = requests.put(CouchDBURL + '/users/' + args['_id'],
+                         auth=(CouchDBUser, CouchDBPass),
+                         json=putparameters)
+            print (r.status_code)
+            print (r.content)
+            if r.status_code == 200:
+                return make_response(jsonify({'message': 'success'}), 200)
 
 
 
@@ -149,6 +171,23 @@ class UserAPI(Resource):
         couchdb_json = json.loads(r.content.decode('utf-8'))
         del couchdb_json['password']
         return couchdb_json
+
+    def delete(self,id):
+        self.reqparseput = reqparse.RequestParser()
+        self.reqparseput.add_argument('rev', type=str, help='revision is mandatory',
+                                   required=True,location='args')
+        args = self.reqparseput.parse_args()
+        putparameters = deepcopy(args)
+        print(putparameters)
+
+        r = requests.delete(CouchDBURL + '/users/' + id,
+                            auth=(CouchDBUser, CouchDBPass),
+                            params=putparameters)
+        print (r.status_code)
+        print (r.content)
+        if r.status_code == 200:
+            return make_response(jsonify({'message': 'success'}), 200)
+
 
 class UsernamesAPI(Resource):
     decorators = [auth.login_required]
